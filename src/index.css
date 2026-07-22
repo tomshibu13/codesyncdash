@@ -1,0 +1,325 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+@layer base {
+  body {
+    @apply bg-black text-slate-100 font-sans antialiased selection:bg-[#C3F53B] selection:text-black min-h-screen overflow-x-hidden;
+    
+  }
+}
+
+/* ── Matte Cards ─ Pure Black Theme ──────────────────── */
+.matte-card {
+  background: #0D0D0D;
+  border: 1px solid #1A1A1A;
+  border-radius: 20px;
+}
+
+.matte-card-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.matte-card-hover:hover {
+  border-color: #2A2A2A;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.9);
+}
+
+/* glass-panel alias (same style) */
+.glass-panel {
+  background: #0D0D0D;
+  border: 1px solid #1A1A1A;
+  border-radius: 20px;
+}
+
+.glass-panel-hover {
+  transition: all 0.25s ease-in-out;
+}
+
+.glass-panel-hover:hover {
+  border-color: rgba(195, 245, 59, 0.25);
+  box-shadow: 0 0 20px -5px rgba(195, 245, 59, 0.12);
+  transform: translateY(-2px);
+}
+
+/* ── Glow utilities ──────────────────────────────────── */
+.glow-lime {
+  box-shadow: 0 0 15px rgba(195, 245, 59, 0.3);
+}
+
+.glow-orange {
+  box-shadow: 0 0 15px rgba(255, 140, 0, 0.3);
+}
+
+.glow-blue {
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+}
+
+.glow-green {
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+}
+
+.glow-red {
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+}
+
+.glow-purple {
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+}
+
+/* ── Scrollbar ───────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1A1A1A;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C3F53B;
+}
+
+/* ── Pulse animation ─────────────────────────────────── */
+@keyframes pingSlow {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.15);
+    opacity: 0.4;
+  }
+
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pingSlow 3s infinite ease-in-out;
+}
+
+/* ── Complete Website Light Theme Adaptation ──────────────── */
+html.light, body.light {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+}
+
+.light .matte-card,
+.light .glass-panel {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 20px;
+  box-shadow: 0 4px 25px -2px rgba(0, 0, 0, 0.06) !important;
+  color: #0F172A !important;
+}
+
+.light .matte-card-hover:hover,
+.light .glass-panel-hover:hover {
+  border-color: #CBD5E1 !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-2px);
+}
+
+/* Hardcoded dark backgrounds across tables, panels & cards in light mode */
+.light .bg-black:not(header):not(aside):not(.terminal-box) {
+  background-color: #FFFFFF !important;
+}
+
+.light [class*="bg-[#0D0D0D]"]:not(header):not(aside):not(.terminal-box),
+.light [class*="bg-[#090D16]"]:not(header):not(aside):not(.terminal-box),
+.light [class*="bg-slate-900"]:not(header):not(aside):not(.terminal-box) {
+  background-color: #FFFFFF !important;
+  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.04);
+}
+
+.light [class*="bg-[#111111]"]:not(header):not(aside):not(.terminal-box),
+.light [class*="bg-slate-800"]:not(header):not(aside):not(.terminal-box),
+.light [class*="bg-[#0A0A0C]"] {
+  background-color: #F1F5F9 !important;
+}
+
+/* All Table headers and rows in Light Mode */
+.light tr[class*="bg-[#1E1E22]"],
+.light thead tr,
+.light [class*="bg-[#1E1E22]"]:not(button) {
+  background-color: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+
+/* ── BUTTONS IN LIGHT MODE (Ensure 100% Readable Text) ──────── */
+/* 1. Dark/Neutral/Secondary Buttons (Logs, Previous/Next, Download, Cancel, Icon Buttons) */
+.light button[class*="bg-[#1E1E22]"],
+.light button[class*="bg-[#28282E]"],
+.light button[class*="bg-[#111111]"],
+.light button[class*="bg-[#0D0D0D]"],
+.light button[class*="bg-[#1A1A1A]"],
+.light button[class*="bg-[#2A2A30]"],
+.light button[class*="bg-slate-800"],
+.light button[class*="bg-slate-900"],
+.light button[class*="bg-slate-700"],
+.light button[class*="bg-black"] {
+  background-color: #E2E8F0 !important;
+  border: 1px solid #CBD5E1 !important;
+  color: #0F172A !important;
+  font-weight: 700 !important;
+}
+
+.light button[class*="bg-[#1E1E22]"]:hover,
+.light button[class*="bg-[#28282E]"]:hover,
+.light button[class*="bg-[#111111]"]:hover,
+.light button[class*="bg-[#0D0D0D]"]:hover,
+.light button[class*="bg-[#1A1A1A]"]:hover,
+.light button[class*="bg-[#2A2A30]"]:hover,
+.light button[class*="bg-slate-800"]:hover,
+.light button[class*="bg-slate-900"]:hover,
+.light button[class*="bg-slate-700"]:hover,
+.light button[class*="bg-black"]:hover {
+  background-color: #CBD5E1 !important;
+  border-color: #94A3B8 !important;
+  color: #000000 !important;
+}
+
+.light button[class*="bg-[#1E1E22]"] *,
+.light button[class*="bg-[#28282E]"] *,
+.light button[class*="bg-[#111111]"] *,
+.light button[class*="bg-[#0D0D0D]"] *,
+.light button[class*="bg-slate-800"] * {
+  color: inherit !important;
+}
+
+/* 2. Primary / Colored Buttons (Save, Submit, Action buttons) */
+.light button[class*="bg-blue-"],
+.light button[class*="bg-emerald-"],
+.light button[class*="bg-indigo-"],
+.light button[class*="bg-purple-"],
+.light button[class*="bg-red-"],
+.light button[class*="bg-teal-"],
+.light button[class*="bg-violet-"] {
+  color: #FFFFFF !important;
+}
+
+.light button[class*="bg-blue-"] *,
+.light button[class*="bg-emerald-"] *,
+.light button[class*="bg-indigo-"] *,
+.light button[class*="bg-purple-"] *,
+.light button[class*="bg-red-"] * {
+  color: #FFFFFF !important;
+}
+
+.light button[class*="bg-amber-"] {
+  background-color: #F59E0B !important;
+  color: #000000 !important;
+}
+
+/* Borders */
+.light [class*="border-[#1A1A1A]"],
+.light [class*="border-[#222226]"],
+.light [class*="border-[#2A2A30]"],
+.light [class*="border-slate-800"],
+.light [class*="border-slate-700"] {
+  border-color: #E2E8F0 !important;
+}
+
+/* Typography & Colors across panels & text */
+.light [class*="text-slate-100"],
+.light [class*="text-slate-200"],
+.light [class*="text-slate-300"],
+.light .text-white:not(button):not(button *):not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-indigo-"]):not([class*="bg-purple-"]):not([class*="bg-red-"]) {
+  color: #0F172A !important;
+}
+
+.light [class*="text-slate-400"] {
+  color: #475569 !important;
+}
+
+/* Inputs, Selects & Search */
+.light input[type="text"],
+.light input[type="search"],
+.light input[type="range"],
+.light select {
+  background-color: #FFFFFF !important;
+  border-color: #CBD5E1 !important;
+  color: #0F172A !important;
+}
+
+.light input::placeholder {
+  color: #94A3B8 !important;
+}
+
+/* Table Hover & Striping */
+.light tr:hover,
+.light [class*="hover:bg-[#111111]"]:hover,
+.light [class*="hover:bg-slate-800"]:hover {
+  background-color: #F1F5F9 !important;
+}
+
+/* Modals & Popovers in Light Mode */
+.light [role="dialog"],
+.light .modal-content {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Badges and Active Accents stay vibrant */
+.light .bg-\[\#C3F53B\] {
+  background-color: #C3F53B !important;
+  color: #000000 !important;
+}
+
+.light .text-\[\#C3F53B\] {
+  color: #65a30d !important;
+}
+
+/* ── Terminal & Debugger Consoles (Stay high-contrast dark developer screen in both modes) ── */
+.terminal-box,
+.light .terminal-box,
+.light div.terminal-box {
+  background-color: #030712 !important;
+  border: 1px solid #1E293B !important;
+  color: #E2E8F0 !important;
+}
+
+.terminal-box *,
+.light .terminal-box *,
+.light .terminal-box [class*="text-slate-"] {
+  color: #CBD5E1 !important;
+}
+
+.terminal-box .text-red-400,
+.light .terminal-box .text-red-400 {
+  color: #F87171 !important;
+}
+
+.terminal-box .text-amber-400,
+.light .terminal-box .text-amber-400 {
+  color: #FBBF24 !important;
+}
+
+.terminal-box .text-emerald-400,
+.light .terminal-box .text-emerald-400 {
+  color: #34D399 !important;
+}
+
+.terminal-box .text-slate-600,
+.light .terminal-box .text-slate-600 {
+  color: #64748B !important;
+}
+
+.terminal-box .text-slate-500,
+.light .terminal-box .text-slate-500 {
+  color: #94A3B8 !important;
+}

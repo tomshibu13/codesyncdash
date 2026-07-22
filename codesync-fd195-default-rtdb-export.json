@@ -1,0 +1,166 @@
+{
+  "logs": {
+    "all_submissions": {
+      "-Oy4h9r7Cmf53-poEDK4": {
+        "displayName": "Tom Shibu",
+        "durationSeconds": 2,
+        "email": "tomshibu49@gmail.com",
+        "fileName": "ticket13.zip",
+        "fileSizeBytes": 66751,
+        "id": "-Oy4h9r7Cmf53-poEDK4",
+        "originalName": "ticket13.zip",
+        "r2Key": "submitted/ticket13.zip",
+        "r2Url": "https://pub-8c5726df2e3046a1a68c9dc28431874f.r2.dev/submitted/ticket13.zip",
+        "submittedAt": 1784654639285,
+        "submittedAtISO": "2026-07-21T17:23:58.347Z",
+        "taskId": "Task002",
+        "uid": "ehhCFgLZ7TYLVWnZQVXivYIP8IV2"
+      },
+      "-Oy4hK80Pd_ZhaZSMtpq": {
+        "displayName": "Tom Shibu",
+        "durationSeconds": 45,
+        "email": "tomshibu49@gmail.com",
+        "fileName": "ticket13.zip",
+        "fileSizeBytes": 66752,
+        "id": "-Oy4hK80Pd_ZhaZSMtpq",
+        "originalName": "ticket13.zip",
+        "r2Key": "submitted/ticket13.zip",
+        "r2Url": "https://pub-8c5726df2e3046a1a68c9dc28431874f.r2.dev/submitted/ticket13.zip",
+        "submittedAt": 1784654681386,
+        "submittedAtISO": "2026-07-21T17:24:40.452Z",
+        "taskId": "Task002",
+        "uid": "ehhCFgLZ7TYLVWnZQVXivYIP8IV2"
+      },
+      "-Oy4iMyR-ZUiD-E1mdyW": {
+        "displayName": "AIBAL JOSE",
+        "durationSeconds": 4,
+        "email": "aibaljose2027@mca.ajce.in",
+        "fileName": "ticket2.zip",
+        "fileSizeBytes": 66725,
+        "id": "-Oy4iMyR-ZUiD-E1mdyW",
+        "originalName": "ticket2.zip",
+        "r2Key": "submitted/ticket2.zip",
+        "r2Url": "https://pub-8c5726df2e3046a1a68c9dc28431874f.r2.dev/submitted/ticket2.zip",
+        "submittedAt": 1784654955104,
+        "submittedAtISO": "2026-07-21T17:29:16.101Z",
+        "taskId": "Task001",
+        "uid": "7caueJy0AbbRc1E3NDnkd5Ns4gg2"
+      },
+      "-Oy4oFOuSTKnaBOrwlia": {
+        "displayName": "Tom Shibu",
+        "durationSeconds": 46,
+        "email": "tomshibu49@gmail.com",
+        "fileName": "ticket13.zip",
+        "fileSizeBytes": 66940,
+        "id": "-Oy4oFOuSTKnaBOrwlia",
+        "originalName": "ticket13.zip",
+        "r2Key": "submitted/ticket13.zip",
+        "r2Url": "https://pub-8c5726df2e3046a1a68c9dc28431874f.r2.dev/submitted/ticket13.zip",
+        "submittedAt": 1784656496965,
+        "submittedAtISO": "2026-07-21T17:54:55.960Z",
+        "taskId": "ticket13",
+        "uid": "ehhCFgLZ7TYLVWnZQVXivYIP8IV2"
+      }
+    },
+    "users": {
+      "7caueJy0AbbRc1E3NDnkd5Ns4gg2": {
+        "submissions": {
+          "-Oy4iMyR-ZUiD-E1mdyW": {
+            "displayName": "AIBAL JOSE",
+            "durationSeconds": 4,
+            "email": "aibaljose2027@mca.ajce.in",
+            "fileName": "ticket2.zip",
+            "fileSizeBytes": 66725,
+            "id": "-Oy4iMyR-ZUiD-E1mdyW",
+            "originalName": "ticket2.zip",
+            "r2Key": "submitted/ticket2.zip",
+            "r2Url": "https://pub-8c5726df2e3046a1a68c9dc28431874f.r2.dev/submitted/ticket2.zip",
+            "submittedAt": 1784654954784,
+            "submittedAtISO": "2026-07-21T17:29:16.101Z",
+            "taskId": "Task001",
+            "uid": "7caueJy0AbbRc1E3NDnkd5Ns4gg2"
+          }
+        }
+      },
+      "ehhCFgLZ7TYLVWnZQVXivYIP8IV2": {
+        "submissions": {
+          "-Oy4h9r7Cmf53-poEDK4": {
+            "displayName": "Tom Shibu",
+            "durationSeconds": 2,
+            "email": "tomshibu49@gmail.com",
+            "fileName": "ticket13.zip",
+            "fileSizeBytes": 66751,
+            "id": "-Oy4h9r7Cmf53-poEDK4",
+            "originalName": "ticket13.zip",
+            "r2Key": "submitted/ticket13.zip",
+            "r2Url": "https://pub-8c5726df2e3046a1a68c9dc28431874f.r2.dev/submitted/ticket13.zip",
+            "submittedAt": 1784654638970,
+            "submittedAtISO": "2026-07-21T17:23:58.347Z",
+            "taskId": "Task002",
+            "uid": "ehhCFgLZ7TYLVWnZQVXivYIP8IV2"
+          },
+          "-Oy4hK80Pd_ZhaZSMtpq": {
+            "displayName": "Tom Shibu",
+            "durationSeconds": 45,
+            "email": "tomshibu49@gmail.com",
+            "fileName": "ticket13.zip",
+            "fileSizeBytes": 66752,
+            "id": "-Oy4hK80Pd_ZhaZSMtpq",
+            "originalName": "ticket13.zip",
+            "r2Key": "submitted/ticket13.zip",
+            "r2Url": "https://pub-8c5726df2e3046a1a68c9dc28431874f.r2.dev/submitted/ticket13.zip",
+            "submittedAt": 1784654681069,
+            "submittedAtISO": "2026-07-21T17:24:40.452Z",
+            "taskId": "Task002",
+            "uid": "ehhCFgLZ7TYLVWnZQVXivYIP8IV2"
+          },
+          "-Oy4oFOuSTKnaBOrwlia": {
+            "displayName": "Tom Shibu",
+            "durationSeconds": 46,
+            "email": "tomshibu49@gmail.com",
+            "fileName": "ticket13.zip",
+            "fileSizeBytes": 66940,
+            "id": "-Oy4oFOuSTKnaBOrwlia",
+            "originalName": "ticket13.zip",
+            "r2Key": "submitted/ticket13.zip",
+            "r2Url": "https://pub-8c5726df2e3046a1a68c9dc28431874f.r2.dev/submitted/ticket13.zip",
+            "submittedAt": 1784656496578,
+            "submittedAtISO": "2026-07-21T17:54:55.960Z",
+            "taskId": "ticket13",
+            "uid": "ehhCFgLZ7TYLVWnZQVXivYIP8IV2"
+          }
+        }
+      }
+    }
+  },
+  "status": {
+    "users": {
+      "7caueJy0AbbRc1E3NDnkd5Ns4gg2": {
+        "displayName": "AIBAL JOSE",
+        "email": "aibaljose2027@mca.ajce.in",
+        "hasSubmitted": true,
+        "isLoggedIn": true,
+        "isOnline": true,
+        "lastActive": 1784657075628,
+        "lastSubmissionAt": 1784654955413,
+        "lastSubmissionFile": "ticket2.zip",
+        "lastSubmissionUrl": "https://pub-8c5726df2e3046a1a68c9dc28431874f.r2.dev/submitted/ticket2.zip",
+        "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocKrWlQbLD0iHl4aYIkhZplK5iKjvrllHR6Ng6_tY4lqtSVH_Q5D=s96-c",
+        "uid": "7caueJy0AbbRc1E3NDnkd5Ns4gg2"
+      },
+      "ehhCFgLZ7TYLVWnZQVXivYIP8IV2": {
+        "displayName": "Tom Shibu",
+        "email": "tomshibu49@gmail.com",
+        "hasSubmitted": true,
+        "isLoggedIn": true,
+        "isOnline": true,
+        "lastActive": 1784656446814,
+        "lastSubmissionAt": 1784656497296,
+        "lastSubmissionFile": "ticket13.zip",
+        "lastSubmissionUrl": "https://pub-8c5726df2e3046a1a68c9dc28431874f.r2.dev/submitted/ticket13.zip",
+        "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocLNyefsGeSFME9OU2SpfcYf1R4fvugos--umvKZ-y-H7Cpxu4OY=s96-c",
+        "uid": "ehhCFgLZ7TYLVWnZQVXivYIP8IV2"
+      }
+    }
+  }
+}
