@@ -7,10 +7,68 @@ import { FileCheck, Download, Folder, FileCode2, Loader2 } from 'lucide-react';
 
 const TABS = ['home', 'about', 'participate', 'register', 'schedule'];
 
+// Helper to fetch file as Blob, trying direct fetch first then CORS proxies
+const fetchFileAsBlob = async (url) => {
+  // 1. Try direct fetch
+  try {
+    const res = await fetch(url);
+    if (res.ok) {
+      return await res.blob();
+    }
+  } catch (e) {
+    console.warn('Direct fetch failed, attempting CORS proxy...', e);
+  }
+
+  // 2. Fallback to corsproxy.io
+  try {
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl);
+    if (res.ok) {
+      return await res.blob();
+    }
+  } catch (e) {
+    console.warn('Corsproxy failed, attempting allorigins proxy...', e);
+  }
+
+  // 3. Fallback to api.allorigins.win
+  try {
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl);
+    if (res.ok) {
+      return await res.blob();
+    }
+  } catch (e) {
+    console.warn('Allorigins proxy failed...', e);
+  }
+
+  throw new Error('Could not download file content due to network or CORS restrictions.');
+};
+
+// Helper to derive a clean suggested filename
+const getFileName = (file, index) => {
+  let name = file.fileName || file.originalName || file.name;
+  if (!name && file.r2Url) {
+    try {
+      const urlPath = new URL(file.r2Url).pathname;
+      const parts = urlPath.split('/');
+      name = parts[parts.length - 1];
+    } catch (e) {
+      // ignore
+    }
+  }
+  if (!name || name === `file-${file.id}` || name.startsWith('file-')) {
+    const ext = file.r2Url?.endsWith('.zip') ? '.zip' : '';
+    name = `submission-${file.id || index + 1}${ext || '.zip'}`;
+  }
+  return name;
+};
+
 export default function SubmissionsPage() {
   const [activeTab, setActiveTab] = useState('home');
   const [tabData, setTabData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 
   useEffect(() => {
     if (!rtdb) return;
@@ -52,88 +110,102 @@ export default function SubmissionsPage() {
   }, [activeTab]);
 
   const downloadAllR2Files = async () => {
-    if (!tabData || tabData.length === 0) return;
+    if (!tabData || tabData.length === 0 || isDownloadingAll) return;
     
+    setIsDownloadingAll(true);
     try {
-      // Ask user to select a directory to save all files
-      const dirHandle = await window.showDirectoryPicker({
-        mode: 'readwrite',
-      });
-      
+      let dirHandle;
+      try {
+        dirHandle = await window.showDirectoryPicker({
+          mode: 'readwrite',
+        });
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          setIsDownloadingAll(false);
+          return;
+        }
+        throw err;
+      }
+
       let successCount = 0;
+      let failCount = 0;
+
       for (let i = 0; i < tabData.length; i++) {
         const file = tabData[i];
         if (file.r2Url) {
-          const fileName = file.fileName || file.name || `file-${i}.zip`;
+          const fileName = getFileName(file, i);
           try {
-            const response = await fetch(file.r2Url);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const blob = await response.blob();
-            
+            const blob = await fetchFileAsBlob(file.r2Url);
             const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
             const writable = await fileHandle.createWritable();
             await writable.write(blob);
             await writable.close();
             successCount++;
           } catch (err) {
-            console.error('Fetch/write failed for ' + fileName, err);
-            // Fallback for CORS or other fetch issues
-            const a = document.createElement('a');
-            a.href = file.r2Url;
-            a.download = fileName;
-            a.target = '_blank';
-            a.click();
+            console.error(`Failed to download ${fileName}:`, err);
+            failCount++;
           }
         }
       }
+
       if (successCount > 0) {
-        alert(`Successfully downloaded ${successCount} files to your chosen folder!`);
+        alert(`Successfully saved ${successCount} file(s) to your selected directory!${failCount > 0 ? ` (${failCount} failed)` : ''}`);
+      } else if (failCount > 0) {
+        alert(`Failed to save files. Please check network connection.`);
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
-        console.error('Directory picker failed:', err);
-        // Fallback to standard automatic download
-        tabData.forEach((file, index) => {
-          if (file.r2Url) {
-            setTimeout(() => {
-              const a = document.createElement('a');
-              a.href = file.r2Url;
-              a.download = file.fileName || file.name || `file-${index}.zip`;
-              a.target = '_blank';
-              a.click();
-            }, index * 300);
-          }
-        });
+        console.error('Directory download failed:', err);
+        alert(`Directory save failed: ${err.message}`);
       }
+    } finally {
+      setIsDownloadingAll(false);
     }
   };
 
   const downloadSingleFile = async (file, index) => {
-    const fileName = file.fileName || file.name || `file-${index}.zip`;
+    const fileId = file.id || index;
+    if (downloadingId === fileId) return;
+
+    setDownloadingId(fileId);
+    const fileName = getFileName(file, index);
+
     try {
-      if (window.showSaveFilePicker) {
-        const fileHandle = await window.showSaveFilePicker({
-          suggestedName: fileName,
-        });
-        const response = await fetch(file.r2Url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const blob = await response.blob();
-        const writable = await fileHandle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-      } else {
-        throw new Error('showSaveFilePicker not supported');
+      // Step 1: Fetch blob FIRST into memory
+      const blob = await fetchFileAsBlob(file.r2Url);
+
+      // Step 2: Use window.showSaveFilePicker if available
+      if ('showSaveFilePicker' in window) {
+        try {
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: fileName,
+          });
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            return;
+          }
+          console.warn('showSaveFilePicker error, falling back to same-origin Blob URL:', err);
+        }
       }
+
+      // Step 3: Fallback using same-origin Blob URL
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
     } catch (err) {
-      if (err.name !== 'AbortError') {
-        console.error('Single download failed:', err);
-        // Fallback to normal download
-        const a = document.createElement('a');
-        a.href = file.r2Url;
-        a.download = fileName;
-        a.target = '_blank';
-        a.click();
-      }
+      console.error('Single file download failed:', err);
+      alert(`Failed to download file "${fileName}": ${err.message}`);
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -170,15 +242,19 @@ export default function SubmissionsPage() {
           
           <button
             onClick={downloadAllR2Files}
-            disabled={loading || tabData.length === 0}
+            disabled={loading || tabData.length === 0 || isDownloadingAll}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              tabData.length > 0
+              tabData.length > 0 && !isDownloadingAll
                 ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border border-indigo-500/30'
                 : 'bg-slate-800/40 text-slate-500 cursor-not-allowed border border-slate-800/50'
             }`}
           >
-            <Download className="w-4 h-4" />
-            Download All {activeTab} Files
+            {isDownloadingAll ? (
+              <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {isDownloadingAll ? `Downloading All ${activeTab} Files...` : `Download All ${activeTab} Files`}
           </button>
         </div>
 
@@ -197,28 +273,38 @@ export default function SubmissionsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {tabData.map((file, idx) => (
-              <div key={file.id || idx} className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 hover:bg-slate-800/60 transition-colors group">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="p-2 bg-slate-900/50 rounded-lg text-emerald-400">
-                    <FileCode2 className="w-5 h-5" />
+            {tabData.map((file, idx) => {
+              const isDownloadingThis = downloadingId === (file.id || idx);
+              return (
+                <div key={file.id || idx} className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 hover:bg-slate-800/60 transition-colors group">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="p-2 bg-slate-900/50 rounded-lg text-emerald-400">
+                      <FileCode2 className="w-5 h-5" />
+                    </div>
+                    <button 
+                      onClick={() => downloadSingleFile(file, idx)}
+                      disabled={isDownloadingThis}
+                      className={`p-1.5 bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors ${
+                        isDownloadingThis ? 'opacity-100 cursor-not-allowed' : 'opacity-0 group-hover:opacity-100'
+                      }`}
+                      title="Download individual file"
+                    >
+                      {isDownloadingThis ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => downloadSingleFile(file, idx)}
-                    className="p-1.5 bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                    title="Download individual file"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
+                  <h4 className="text-sm font-medium text-slate-200 truncate mb-1">
+                    {file.fileName || file.name || `file-${idx + 1}`}
+                  </h4>
+                  <p className="text-xs text-slate-500 truncate" title={file.r2Url}>
+                    {file.r2Url}
+                  </p>
                 </div>
-                <h4 className="text-sm font-medium text-slate-200 truncate mb-1">
-                  {file.fileName || file.name || `file-${idx + 1}`}
-                </h4>
-                <p className="text-xs text-slate-500 truncate" title={file.r2Url}>
-                  {file.r2Url}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
