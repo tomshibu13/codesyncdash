@@ -7,7 +7,7 @@ import { FileCheck, Download, Folder, FileCode2, Loader2 } from 'lucide-react';
 
 const TABS = ['home', 'about', 'participate', 'register', 'schedule'];
 
-// Helper to fetch file as Blob, trying direct fetch first then CORS proxies
+// Helper to fetch file as Blob, trying direct fetch first then reliable CORS proxies
 const fetchFileAsBlob = async (url) => {
   // 1. Try direct fetch
   try {
@@ -16,21 +16,10 @@ const fetchFileAsBlob = async (url) => {
       return await res.blob();
     }
   } catch (e) {
-    console.warn('Direct fetch failed, attempting CORS proxy...', e);
+    console.warn('Direct fetch failed, trying CORS proxy fallback...', e);
   }
 
-  // 2. Fallback to corsproxy.io
-  try {
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-    const res = await fetch(proxyUrl);
-    if (res.ok) {
-      return await res.blob();
-    }
-  } catch (e) {
-    console.warn('Corsproxy failed, attempting allorigins proxy...', e);
-  }
-
-  // 3. Fallback to api.allorigins.win
+  // 2. Fallback to api.allorigins.win
   try {
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
     const res = await fetch(proxyUrl);
@@ -38,10 +27,21 @@ const fetchFileAsBlob = async (url) => {
       return await res.blob();
     }
   } catch (e) {
-    console.warn('Allorigins proxy failed...', e);
+    console.warn('Allorigins proxy failed, trying codetabs proxy...', e);
   }
 
-  throw new Error('Could not download file content due to network or CORS restrictions.');
+  // 3. Fallback to api.codetabs.com
+  try {
+    const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl);
+    if (res.ok) {
+      return await res.blob();
+    }
+  } catch (e) {
+    console.warn('Codetabs proxy failed...', e);
+  }
+
+  throw new Error('Unable to fetch file content via direct request or proxies.');
 };
 
 // Helper to derive a clean suggested filename
@@ -114,44 +114,76 @@ export default function SubmissionsPage() {
     
     setIsDownloadingAll(true);
     try {
-      let dirHandle;
-      try {
-        dirHandle = await window.showDirectoryPicker({
-          mode: 'readwrite',
-        });
-      } catch (err) {
-        if (err.name === 'AbortError') {
-          setIsDownloadingAll(false);
-          return;
+      // Check if showDirectoryPicker is supported and allowed
+      if ('showDirectoryPicker' in window) {
+        let dirHandle = null;
+        try {
+          dirHandle = await window.showDirectoryPicker({
+            mode: 'readwrite',
+          });
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            setIsDownloadingAll(false);
+            return;
+          }
+          console.warn('showDirectoryPicker unavailable or blocked, using sequential download fallback:', err);
         }
-        throw err;
+
+        if (dirHandle) {
+          let successCount = 0;
+          let failCount = 0;
+
+          for (let i = 0; i < tabData.length; i++) {
+            const file = tabData[i];
+            if (file.r2Url) {
+              const fileName = getFileName(file, i);
+              try {
+                const blob = await fetchFileAsBlob(file.r2Url);
+                const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                successCount++;
+              } catch (err) {
+                console.error(`Failed to download ${fileName}:`, err);
+                failCount++;
+              }
+            }
+          }
+
+          if (successCount > 0) {
+            alert(`Successfully saved ${successCount} file(s) to your selected directory!${failCount > 0 ? ` (${failCount} failed)` : ''}`);
+            return;
+          }
+        }
       }
 
+      // Fallback for browsers without showDirectoryPicker or if dirHandle failed
       let successCount = 0;
-      let failCount = 0;
-
       for (let i = 0; i < tabData.length; i++) {
         const file = tabData[i];
         if (file.r2Url) {
           const fileName = getFileName(file, i);
           try {
             const blob = await fetchFileAsBlob(file.r2Url);
-            const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(blob);
-            await writable.close();
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
             successCount++;
+            await new Promise(r => setTimeout(r, 400));
           } catch (err) {
-            console.error(`Failed to download ${fileName}:`, err);
-            failCount++;
+            console.error(`Fallback download failed for ${fileName}, opening direct URL:`, err);
+            window.open(file.r2Url, '_blank');
           }
         }
       }
-
       if (successCount > 0) {
-        alert(`Successfully saved ${successCount} file(s) to your selected directory!${failCount > 0 ? ` (${failCount} failed)` : ''}`);
-      } else if (failCount > 0) {
-        alert(`Failed to save files. Please check network connection.`);
+        alert(`Started downloading ${successCount} files! Check your downloads.`);
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -171,8 +203,23 @@ export default function SubmissionsPage() {
     const fileName = getFileName(file, index);
 
     try {
-      // Step 1: Fetch blob FIRST into memory
-      const blob = await fetchFileAsBlob(file.r2Url);
+      // Step 1: Attempt to fetch file as Blob
+      let blob;
+      try {
+        blob = await fetchFileAsBlob(file.r2Url);
+      } catch (err) {
+        console.warn('Blob fetch failed, opening direct URL:', err);
+        // Fallback: direct download link / open tab
+        const a = document.createElement('a');
+        a.href = file.r2Url;
+        a.download = fileName;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
 
       // Step 2: Use window.showSaveFilePicker if available
       if ('showSaveFilePicker' in window) {
