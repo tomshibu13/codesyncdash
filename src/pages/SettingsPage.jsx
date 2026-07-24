@@ -29,11 +29,6 @@ export default function SettingsPage() {
             <div>
               <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
                 System Lock / Unlock Control
-                {isSystemLocked && (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wide bg-red-500/20 text-red-400 border border-red-500/30">
-                    LOCKED
-                  </span>
-                )}
               </h3>
               <p className="text-xs text-slate-400">
                 {isSystemLocked ? 'All connected user IDE windows and systems are currently LOCKED and disabled.' : 'Lock or unlock all connected user windows across all IDE sessions immediately.'}
@@ -42,19 +37,18 @@ export default function SettingsPage() {
           </div>
           <button
             onClick={() => setIsSystemLocked(!isSystemLocked)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${isSystemLocked
-              ? 'bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/30'
-              : 'bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30'
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer shadow-md ${isSystemLocked
+                ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 border border-emerald-300 shadow-emerald-500/30 animate-pulse'
+                : 'bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500 hover:text-white shadow-red-500/20'
               }`}
           >
             {isSystemLocked ? (
               <>
-                <Unlock className="w-4 h-4" /> Unlock
-
+                <Unlock className="w-4 h-4" /> Lock All Systems
               </>
             ) : (
               <>
-                <Lock className="w-4 h-4" /> System Locked (Unlock All)
+                <Lock className="w-4 h-4" /> Unlock All Systems
               </>
             )}
           </button>
@@ -153,7 +147,7 @@ export default function SettingsPage() {
           </div>
           <button
             onClick={() => {
-              if(window.confirm('Are you sure you want to reset Integration and Hosting progress?')) {
+              if (window.confirm('Are you sure you want to reset Integration and Hosting progress?')) {
                 updateIntegrationData({
                   integrationComplete: false,
                   hostingComplete: false,

@@ -140,9 +140,9 @@ export default function DashboardCards() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: idx * 0.1 }}
-                  className={`relative p-5 rounded-2xl border transition-all duration-500 flex items-center justify-between overflow-hidden group ${
+                  className={`relative p-4 sm:p-5 rounded-2xl border transition-all duration-500 flex flex-col justify-between gap-2.5 overflow-hidden min-h-[96px] group ${
                     isComplete
-                      ? 'bg-gradient-to-r from-emerald-950/90 via-emerald-900/70 to-emerald-950/90 border-2 border-emerald-400 text-emerald-300 shadow-[0_0_35px_-5px_rgba(16,185,129,0.45)]'
+                      ? 'bg-gradient-to-r from-emerald-950/95 via-emerald-900/80 to-emerald-950/95 border-2 border-emerald-400 text-emerald-300 shadow-[0_0_35px_-5px_rgba(16,185,129,0.45)]'
                       : (isDarkMode
                           ? 'bg-slate-950/90 border-slate-800/80 text-slate-300'
                           : 'bg-slate-50 border-slate-200 text-slate-800 shadow-md')
@@ -153,38 +153,39 @@ export default function DashboardCards() {
                     <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none -mr-8 -mt-8" />
                   )}
 
-                  {/* Left: Stage Name & Icon */}
-                  <div className="flex items-center gap-3 relative z-10">
-                    <div className={`p-3 rounded-xl border shrink-0 transition-transform group-hover:scale-110 ${
-                      isComplete
-                        ? 'bg-emerald-500 text-slate-950 border-emerald-300 shadow-lg shadow-emerald-500/40'
-                        : (isDarkMode ? 'bg-slate-800/80 border-slate-700 text-slate-400' : 'bg-slate-200 border-slate-300 text-slate-600')
-                    }`}>
-                      {isComplete ? <CheckCircle2 className="w-6 h-6 text-slate-950" /> : <Icon className="w-6 h-6" />}
-                    </div>
-                    <div>
-                      <h3 className={`text-base font-black tracking-tight uppercase font-mono ${
-                        isComplete ? 'text-emerald-300' : (isDarkMode ? 'text-slate-100' : 'text-slate-800')
+                  {/* Top Row: Icon + Stage Name on Left | Percentage on Right */}
+                  <div className="flex items-center justify-between gap-3 w-full relative z-10">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`p-2.5 rounded-xl border shrink-0 transition-transform group-hover:scale-110 ${
+                        isComplete
+                          ? 'bg-emerald-500 text-slate-950 border-emerald-300 shadow-lg shadow-emerald-500/40'
+                          : (isDarkMode ? 'bg-slate-800/80 border-slate-700 text-slate-400' : 'bg-slate-200 border-slate-300 text-slate-600')
+                      }`}>
+                        {isComplete ? <CheckCircle2 className="w-5 h-5 text-slate-950" /> : <Icon className="w-5 h-5" />}
+                      </div>
+                      <h3 className={`text-sm sm:text-base font-black tracking-tight uppercase font-mono truncate ${
+                        isComplete ? 'text-emerald-200' : (isDarkMode ? 'text-slate-100' : 'text-slate-800')
                       }`}>
                         {step.name}
                       </h3>
-                      <span className={`text-[10px] font-bold uppercase font-mono tracking-wider ${
-                        isComplete ? 'text-emerald-400 font-extrabold' : 'text-slate-500'
-                      }`}>
-                        {isComplete ? 'Stage Complete' : 'In Progress'}
-                      </span>
                     </div>
-                  </div>
 
-                  {/* Right: Percentage Only */}
-                  <div className="text-right relative z-10">
-                    <div className={`text-3xl sm:text-4xl font-black font-mono tracking-tight ${
+                    <div className={`text-2xl sm:text-3xl font-black font-mono tracking-tight shrink-0 ml-auto leading-none ${
                       isComplete
                         ? 'text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.6)]'
                         : (isDarkMode ? 'text-slate-100' : 'text-slate-900')
                     }`}>
                       {step.percent}%
                     </div>
+                  </div>
+
+                  {/* Bottom Row: Status Label (Separated underneath top row) */}
+                  <div className="relative z-10 pl-11">
+                    <span className={`text-[10px] sm:text-[11px] font-bold uppercase font-mono tracking-wider block whitespace-nowrap ${
+                      isComplete ? 'text-emerald-400 font-extrabold' : 'text-slate-500'
+                    }`}>
+                      {isComplete ? 'Stage Complete' : 'In Progress'}
+                    </span>
                   </div>
                 </motion.div>
               </React.Fragment>

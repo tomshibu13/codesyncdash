@@ -13,6 +13,7 @@ import {
   Settings,
   LogOut,
   Terminal,
+  Layers,
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
@@ -25,7 +26,7 @@ const menuItems = [
   { name: 'Submissions', path: '/submissions', icon: FileCheck },
   { name: 'Logs History', path: '/logs', icon: Terminal },
   { name: 'Reports', path: '/reports', icon: FileSpreadsheet },
-  { name: 'Integration', path: '/integration', icon: Terminal },
+  { name: 'Integration', path: '/integration', icon: Layers },
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
