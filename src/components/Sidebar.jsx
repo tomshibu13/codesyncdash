@@ -25,6 +25,7 @@ const menuItems = [
   { name: 'Submissions', path: '/submissions', icon: FileCheck },
   { name: 'Logs History', path: '/logs', icon: Terminal },
   { name: 'Reports', path: '/reports', icon: FileSpreadsheet },
+  { name: 'Integration', path: '/integration', icon: Terminal },
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 

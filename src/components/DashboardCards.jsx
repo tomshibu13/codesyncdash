@@ -17,14 +17,14 @@ import {
 } from 'lucide-react';
 
 export default function DashboardCards() {
-  const { kpis, isDarkMode, students } = useLiveData();
+  const { kpis, isDarkMode, students, integrationData } = useLiveData();
 
   const totalStudents = students?.length || kpis.totalStudents || 0;
 
   // Compute exact stage percentages
   const devPercent = totalStudents > 0 ? Math.min(100, Math.round(((kpis.submissionsCount || 0) / totalStudents) * 100)) : 0;
-  const integrationPercent = totalStudents > 0 ? Math.min(100, Math.round(((kpis.integrationPassedCount || 0) / totalStudents) * 100)) : 0;
-  const hostPercent = totalStudents > 0 ? Math.min(100, Math.round(((kpis.successfulDeployments || 0) / totalStudents) * 100)) : 0;
+  const integrationPercent = integrationData?.integrationComplete ? 100 : (totalStudents > 0 ? Math.min(100, Math.round(((kpis.integrationPassedCount || 0) / totalStudents) * 100)) : 0);
+  const hostPercent = integrationData?.hostingComplete ? 100 : (totalStudents > 0 ? Math.min(100, Math.round(((kpis.successfulDeployments || 0) / totalStudents) * 100)) : 0);
 
   const flowSteps = [
     {

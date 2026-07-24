@@ -263,6 +263,47 @@ export const LiveDataProvider = ({ children }) => {
   const [submissionFilter, setSubmissionFilter] = useState('All');
   const [testingFilter, setTestingFilter] = useState('All');
   const [sortBy, setSortBy] = useState('name');
+  
+  // Integration States
+  const [integrationData, setIntegrationData] = useState({
+    integrationComplete: false,
+    hostingComplete: false,
+    integrationUrl: '',
+    integrationTimestamp: null,
+    hostingTimestamp: null
+  });
+
+  useEffect(() => {
+    if (!rtdb) return;
+    const integrationRef = ref(rtdb, 'admin_integration');
+    const unsub = onValue(integrationRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setIntegrationData({
+          integrationComplete: data.integrationComplete || false,
+          hostingComplete: data.hostingComplete || false,
+          integrationUrl: data.integrationUrl || '',
+          integrationTimestamp: data.integrationTimestamp || null,
+          hostingTimestamp: data.hostingTimestamp || null
+        });
+      } else {
+        setIntegrationData({
+          integrationComplete: false,
+          hostingComplete: false,
+          integrationUrl: '',
+          integrationTimestamp: null,
+          hostingTimestamp: null
+        });
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const updateIntegrationData = (updates) => {
+    if (!rtdb) return;
+    const integrationRef = ref(rtdb, 'admin_integration');
+    set(integrationRef, { ...integrationData, ...updates });
+  };
 
 
 
@@ -329,6 +370,9 @@ export const LiveDataProvider = ({ children }) => {
       setTestingFilter,
       sortBy,
       setSortBy,
+      // Integration
+      integrationData,
+      updateIntegrationData,
       // KPIs
       kpis: {
         totalStudents,

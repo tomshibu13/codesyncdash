@@ -15,6 +15,7 @@ import SubmissionsPage from './pages/SubmissionsPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import LogsPage from './pages/LogsPage';
+import IntegrationPage from './pages/IntegrationPage';
 
 function AppContent() {
   const { isDarkMode } = useLiveData();
@@ -58,6 +59,7 @@ function AppContent() {
               <Route path="/submissions" element={<SubmissionsPage />} />
               <Route path="/logs" element={<LogsPage />} />
               <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/integration" element={<IntegrationPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </main>

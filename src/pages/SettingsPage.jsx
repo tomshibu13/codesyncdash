@@ -3,7 +3,7 @@ import { useLiveData } from '../context/LiveDataContext';
 import { Settings, Moon, Bell, RefreshCw, Sliders, Lock, Unlock } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { isLiveUpdating, setIsLiveUpdating, updateIntervalMs, setUpdateIntervalMs, isDarkMode, setIsDarkMode, isSystemLocked, setIsSystemLocked } = useLiveData();
+  const { isLiveUpdating, setIsLiveUpdating, updateIntervalMs, setUpdateIntervalMs, isDarkMode, setIsDarkMode, isSystemLocked, setIsSystemLocked, updateIntegrationData } = useLiveData();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   return (
@@ -138,6 +138,35 @@ export default function SettingsPage() {
             <option value={5000}>5 Seconds (Slow)</option>
             <option value={10000}>10 Seconds (Paused Ticker)</option>
           </select>
+        </div>
+
+        {/* Reset Integration Progress */}
+        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 glass-panel flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-orange-500/10 text-orange-400">
+              <RefreshCw className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-200">Reset Integration & Hosting Progress</h3>
+              <p className="text-xs text-slate-400">Reset integration and hosting completion status to 0%.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              if(window.confirm('Are you sure you want to reset Integration and Hosting progress?')) {
+                updateIntegrationData({
+                  integrationComplete: false,
+                  hostingComplete: false,
+                  integrationUrl: '',
+                  integrationTimestamp: null,
+                  hostingTimestamp: null
+                });
+              }
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer bg-orange-500/20 text-orange-400 border border-orange-500/40 hover:bg-orange-500/30"
+          >
+            Reset Progress
+          </button>
         </div>
       </div>
     </div>
