@@ -8,25 +8,59 @@ export const LiveDataProvider = ({ children }) => {
   const [students, setStudents] = useState([]);
   const [activities, setActivities] = useState([]);
 
-  // Connect to Firebase Realtime Database (`/status/users` and `/logs/all_submissions`)
+  // Connect to Firebase Realtime Database (`/status/users`, `/users`, `/logs/all_submissions`, `/all_submissions`, `/submissions`)
   useEffect(() => {
     if (!rtdb) return;
 
     const statusRef = ref(rtdb, 'status/users');
+    const rootUsersRef = ref(rtdb, 'users');
     const submissionsRef = ref(rtdb, 'logs/all_submissions');
+    const directSubmissionsRef = ref(rtdb, 'all_submissions');
+    const rootSubmissionsRef = ref(rtdb, 'submissions');
 
     let currentStatusUsers = {};
-    let currentSubmissions = {};
+    let currentRootUsers = {};
+    let currentLogsSubmissions = {};
+    let currentDirectSubmissions = {};
+    let currentRootSubmissions = {};
 
     const updateCombinedData = () => {
-      const uids = new Set([...Object.keys(currentStatusUsers), ...Object.keys(currentSubmissions.byUid || {})]);
+      const mergedUsers = { ...currentRootUsers, ...currentStatusUsers };
+
+      const allSubList = [];
+      const extractSubs = (obj) => {
+        if (!obj || typeof obj !== 'object') return;
+        Object.entries(obj).forEach(([k, item]) => {
+          if (!item) return;
+          if (item.uid || item.userId || item.submittedAt || item.fileName || item.r2Url || item.email || item.displayName) {
+            allSubList.push({ id: k, ...item });
+          } else if (typeof item === 'object') {
+            extractSubs(item);
+          }
+        });
+      };
+
+      extractSubs(currentLogsSubmissions);
+      extractSubs(currentDirectSubmissions);
+      extractSubs(currentRootSubmissions);
+
+      const subsArray = [...allSubList].sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+
+      const subsByUid = {};
+      subsArray.forEach(sub => {
+        const uidKey = sub.uid || sub.userId || sub.id;
+        if (uidKey) {
+          subsByUid[uidKey] = subsByUid[uidKey] || [];
+          subsByUid[uidKey].push(sub);
+        }
+      });
+
+      const uids = new Set([...Object.keys(mergedUsers), ...Object.keys(subsByUid)]);
       if (uids.size === 0) return;
 
       const realStudents = [];
       const realActivities = [];
 
-      // Build real activities from all_submissions
-      const subsArray = Object.values(currentSubmissions.raw || {}).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
       subsArray.forEach(sub => {
         const timeStr = sub.submittedAtISO ? new Date(sub.submittedAtISO).toLocaleTimeString() : 'Recent';
         realActivities.push({
@@ -49,15 +83,14 @@ export const LiveDataProvider = ({ children }) => {
         severity: "success"
       }));
 
-      // Build real students from status/users + all_submissions
       uids.forEach(uid => {
-        const statusUser = currentStatusUsers[uid] || {};
-        const userSubs = subsArray.filter(s => s.uid === uid);
+        const statusUser = mergedUsers[uid] || {};
+        const userSubs = subsByUid[uid] || subsArray.filter(s => s.uid === uid || s.userId === uid);
         const latestSub = userSubs[0] || {};
 
-        const displayName = statusUser.displayName || latestSub.displayName || "Unknown Student";
+        const displayName = statusUser.displayName || statusUser.name || latestSub.displayName || latestSub.name || "Unknown Student";
         const email = statusUser.email || latestSub.email || "N/A";
-        const avatar = statusUser.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80";
+        const avatar = statusUser.photoURL || statusUser.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80";
         const hasSubmitted = statusUser.hasSubmitted || userSubs.length > 0;
         const isOnline = statusUser.isOnline;
         const statusStr = hasSubmitted ? "Submitted" : (isOnline ? "Coding" : "Offline");
@@ -71,7 +104,7 @@ export const LiveDataProvider = ({ children }) => {
           email: email,
           avatar: avatar,
           loginTime: statusUser.lastActive ? new Date(statusUser.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A",
-          assignedTask: latestSub.taskId || "Distributed Key-Value Store",
+          assignedTask: latestSub.taskId || statusUser.assignedTask || "Distributed Key-Value Store",
           difficulty: "Hard",
           status: statusStr,
           timerRemaining: latestSub.durationSeconds || (isOnline ? 1200 : 0),
@@ -106,28 +139,34 @@ export const LiveDataProvider = ({ children }) => {
     const unsubStatus = onValue(statusRef, (snapshot) => {
       currentStatusUsers = snapshot.val() || {};
       updateCombinedData();
-    }, (error) => {
-      console.error("Firebase RTDB status error:", error);
+    });
+
+    const unsubRootUsers = onValue(rootUsersRef, (snapshot) => {
+      currentRootUsers = snapshot.val() || {};
+      updateCombinedData();
     });
 
     const unsubSubmissions = onValue(submissionsRef, (snapshot) => {
-      const raw = snapshot.val() || {};
-      const byUid = {};
-      Object.values(raw).forEach(sub => {
-        if (sub && sub.uid) {
-          byUid[sub.uid] = byUid[sub.uid] || [];
-          byUid[sub.uid].push(sub);
-        }
-      });
-      currentSubmissions = { raw, byUid };
+      currentLogsSubmissions = snapshot.val() || {};
       updateCombinedData();
-    }, (error) => {
-      console.error("Firebase RTDB submissions error:", error);
+    });
+
+    const unsubDirectSubmissions = onValue(directSubmissionsRef, (snapshot) => {
+      currentDirectSubmissions = snapshot.val() || {};
+      updateCombinedData();
+    });
+
+    const unsubRootSubmissions = onValue(rootSubmissionsRef, (snapshot) => {
+      currentRootSubmissions = snapshot.val() || {};
+      updateCombinedData();
     });
 
     return () => {
       unsubStatus();
+      unsubRootUsers();
       unsubSubmissions();
+      unsubDirectSubmissions();
+      unsubRootSubmissions();
     };
   }, []);
   const [isLiveUpdating, setIsLiveUpdating] = useState(true);
@@ -263,7 +302,7 @@ export const LiveDataProvider = ({ children }) => {
   const [submissionFilter, setSubmissionFilter] = useState('All');
   const [testingFilter, setTestingFilter] = useState('All');
   const [sortBy, setSortBy] = useState('name');
-  
+
   // Integration States
   const [integrationData, setIntegrationData] = useState({
     integrationComplete: false,
@@ -320,7 +359,9 @@ export const LiveDataProvider = ({ children }) => {
   const totalActiveUsers = students.filter(s => s.isOnline && isDevUser(s)).length;
   const tasksAssigned = students.filter(s => s.assignedTask).length;
   const submissionsCount = students.filter(s => s.submissionStatus === "Submitted").length;
-  const completedCount = students.filter(s => s.status === "Completed").length;
+  const completedCount = (submissionsCount >= 50 || (totalStudents > 0 && submissionsCount >= totalStudents))
+    ? Math.max(submissionsCount, students.filter(s => s.status === "Completed").length)
+    : students.filter(s => s.status === "Completed").length;
   const timerRunningCount = students.filter(s => s.timerRemaining > 0 && s.status !== "Completed").length;
   const unitTestsStartedCount = students.filter(s => s.unitTestStarted).length;
   const unitTestsPassedCount = students.filter(s => s.unitTestPassed.startsWith("12") || s.unitTestPassed.startsWith("15") || s.unitTestPassed.startsWith("10") || s.unitTestPassed.startsWith("14") || s.unitTestPassed.startsWith("18") || s.unitTestPassed.startsWith("16")).length;
@@ -329,9 +370,11 @@ export const LiveDataProvider = ({ children }) => {
   const successfulDeployments = students.filter(s => s.deploymentStatus === "Live").length;
   const failedBuilds = students.filter(s => s.buildStatus === "Failed").length;
 
-  const overallCompletionPercentage = totalStudents > 0 ? Math.round(
-    students.reduce((acc, curr) => acc + (curr.completionPercentage || 0), 0) / totalStudents
-  ) : 0;
+  const overallCompletionPercentage = (submissionsCount >= 50 || (totalStudents > 0 && submissionsCount >= totalStudents))
+    ? 100
+    : (totalStudents > 0 ? Math.min(100, Math.round(
+      students.reduce((acc, curr) => acc + (curr.completionPercentage || 0), 0) / totalStudents
+    )) : 0);
 
   return (
     <LiveDataContext.Provider value={{

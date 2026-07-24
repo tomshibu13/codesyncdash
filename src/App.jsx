@@ -23,9 +23,8 @@ function AppContent() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 flex flex-col font-sans selection:bg-blue-500 selection:text-white ${
-      isDarkMode ? 'bg-[#0D0D0D] text-slate-100' : 'bg-slate-50 text-slate-900'
-    }`}>
+    <div className={`min-h-screen transition-colors duration-300 flex flex-col font-sans selection:bg-blue-500 selection:text-white ${isDarkMode ? 'bg-[#0D0D0D] text-slate-100' : 'bg-slate-50 text-slate-900'
+      }`}>
       {/* Sidebar Component */}
       <Sidebar
         isMobileOpen={isMobileSidebarOpen}
