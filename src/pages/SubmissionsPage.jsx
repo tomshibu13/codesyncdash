@@ -4,7 +4,6 @@ import { ref, onValue } from 'firebase/database';
 import SubmissionAnalytics from '../components/SubmissionAnalytics';
 import BuildDeployment from '../components/BuildDeployment';
 import { FileCheck, Download, Folder, FileCode2, Loader2 } from 'lucide-react';
-import JSZip from 'jszip';
 
 const TABS = ['home', 'about', 'participate', 'register', 'schedule'];
 
@@ -72,7 +71,7 @@ const getFileName = (file, index) => {
     const ext = file.r2Url?.endsWith('.zip') ? '.zip' : '';
     name = `submission-${file.id || index + 1}${ext || '.zip'}`;
   }
-  return name.replace(/[/\\?%*:|"<>]/g, '_');
+  return name;
 };
 
 export default function SubmissionsPage() {
@@ -85,12 +84,12 @@ export default function SubmissionsPage() {
   useEffect(() => {
     if (!rtdb) return;
     const submissionRef = ref(rtdb, `submissions/${activeTab}`);
-    
+
     setLoading(true);
     const unsubscribe = onValue(submissionRef, (snapshot) => {
       const data = snapshot.val() || {};
       console.log(`Fetched data for tab ${activeTab}:`, data);
-      
+
       const files = [];
       Object.entries(data).forEach(([key, item]) => {
         if (!item) return;
@@ -99,12 +98,12 @@ export default function SubmissionsPage() {
         } else if (typeof item === 'object') {
           let r2Url = item.r2Url || item.fileUrl || item.url;
           if (!r2Url) {
-             for (const val of Object.values(item)) {
-               if (typeof val === 'string' && (val.includes('r2.dev') || val.includes('r2') || val.startsWith('http'))) {
-                 r2Url = val;
-                 break;
-               }
-             }
+            for (const val of Object.values(item)) {
+              if (typeof val === 'string' && (val.includes('r2.dev') || val.includes('r2') || val.startsWith('http'))) {
+                r2Url = val;
+                break;
+              }
+            }
           }
           if (r2Url) {
             files.push({ id: key, ...item, r2Url });
@@ -123,75 +122,90 @@ export default function SubmissionsPage() {
 
   const downloadAllR2Files = async () => {
     if (!tabData || tabData.length === 0 || isDownloadingAll) return;
-    
+
     setIsDownloadingAll(true);
     try {
-      const zip = new JSZip();
-      let successCount = 0;
-      let failCount = 0;
+      // Check if showDirectoryPicker is supported and allowed
+      if ('showDirectoryPicker' in window) {
+        let dirHandle = null;
+        try {
+          dirHandle = await window.showDirectoryPicker({
+            mode: 'readwrite',
+          });
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            setIsDownloadingAll(false);
+            return;
+          }
+          console.warn('showDirectoryPicker unavailable or blocked, using sequential download fallback:', err);
+        }
 
+        if (dirHandle) {
+          let successCount = 0;
+          let failCount = 0;
+
+          for (let i = 0; i < tabData.length; i++) {
+            const file = tabData[i];
+            if (file.r2Url) {
+              const fileName = getFileName(file, i);
+              try {
+                const blob = await fetchFileAsBlob(file.r2Url, fileName);
+                const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                successCount++;
+              } catch (err) {
+                console.error(`Failed to download ${fileName}:`, err);
+                failCount++;
+              }
+            }
+          }
+
+          if (successCount > 0) {
+            alert(`Successfully saved ${successCount} file(s) to your selected directory!${failCount > 0 ? ` (${failCount} failed)` : ''}`);
+            return;
+          }
+        }
+      }
+
+      // Fallback for browsers without showDirectoryPicker or if dirHandle failed
+      let successCount = 0;
       for (let i = 0; i < tabData.length; i++) {
         const file = tabData[i];
         if (file.r2Url) {
-          const rawName = getFileName(file, i);
-          const userIdentifier = file.displayName || file.studentName || (file.email ? file.email.split('@')[0] : '');
-          const prefix = userIdentifier ? `${userIdentifier}_` : '';
-          // Ensure unique file name inside the zip archive to avoid duplicate name overwrite
-          const fileNameInZip = `${i + 1}_${prefix}${rawName}`.replace(/[/\\?%*:|"<>]/g, '_');
-
+          const fileName = getFileName(file, i);
           try {
-            const blob = await fetchFileAsBlob(file.r2Url, fileNameInZip);
-            zip.file(fileNameInZip, blob);
+            const blob = await fetchFileAsBlob(file.r2Url, fileName);
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
             successCount++;
+            await new Promise(r => setTimeout(r, 400));
           } catch (err) {
-            console.error(`Failed to include file ${rawName} in zip:`, err);
-            failCount++;
+            console.error(`Fallback download failed for ${fileName}, initiating direct proxy link:`, err);
+            const proxyDownloadUrl = `/api/proxy?url=${encodeURIComponent(file.r2Url)}&filename=${encodeURIComponent(fileName)}`;
+            const a = document.createElement('a');
+            a.href = proxyDownloadUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
           }
         }
       }
-
       if (successCount > 0) {
-        const zipBlob = await zip.generateAsync({ type: 'blob' });
-        const zipFileName = `${activeTab}_all_submissions.zip`;
-
-        if ('showSaveFilePicker' in window) {
-          try {
-            const fileHandle = await window.showSaveFilePicker({
-              suggestedName: zipFileName,
-              types: [{
-                description: 'ZIP Archive',
-                accept: { 'application/zip': ['.zip'] },
-              }],
-            });
-            const writable = await fileHandle.createWritable();
-            await writable.write(zipBlob);
-            await writable.close();
-            return;
-          } catch (err) {
-            if (err.name === 'AbortError') return;
-            console.warn('showSaveFilePicker error, using blob URL download fallback:', err);
-          }
-        }
-
-        const blobUrl = URL.createObjectURL(zipBlob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = zipFileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-
-        if (failCount > 0) {
-          alert(`Successfully packaged ${successCount} files into "${zipFileName}" (${failCount} failed).`);
-        }
-      } else {
-        alert('Failed to download submission files. Please check network connection.');
+        alert(`Started downloading ${successCount} files! Check your downloads.`);
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
-        console.error('Download all ZIP failed:', err);
-        alert(`Download all failed: ${err.message}`);
+        console.error('Directory download failed:', err);
+        alert(`Directory save failed: ${err.message}`);
       }
     } finally {
       setIsDownloadingAll(false);
@@ -278,25 +292,23 @@ export default function SubmissionsPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 capitalize ${
-                  activeTab === tab 
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 capitalize ${activeTab === tab
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                     : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
-                }`}
+                  }`}
               >
                 {tab}
               </button>
             ))}
           </div>
-          
+
           <button
             onClick={downloadAllR2Files}
             disabled={loading || tabData.length === 0 || isDownloadingAll}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              tabData.length > 0 && !isDownloadingAll
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${tabData.length > 0 && !isDownloadingAll
                 ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border border-indigo-500/30'
                 : 'bg-slate-800/40 text-slate-500 cursor-not-allowed border border-slate-800/50'
-            }`}
+              }`}
           >
             {isDownloadingAll ? (
               <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
@@ -330,12 +342,11 @@ export default function SubmissionsPage() {
                     <div className="p-2 bg-slate-900/50 rounded-lg text-emerald-400">
                       <FileCode2 className="w-5 h-5" />
                     </div>
-                    <button 
+                    <button
                       onClick={() => downloadSingleFile(file, idx)}
                       disabled={isDownloadingThis}
-                      className={`p-1.5 bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors ${
-                        isDownloadingThis ? 'opacity-100 cursor-not-allowed' : 'opacity-0 group-hover:opacity-100'
-                      }`}
+                      className={`p-1.5 bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors ${isDownloadingThis ? 'opacity-100 cursor-not-allowed' : 'opacity-0 group-hover:opacity-100'
+                        }`}
                       title="Download individual file"
                     >
                       {isDownloadingThis ? (
