@@ -43,8 +43,8 @@ export default function SettingsPage() {
           <button
             onClick={() => setIsSystemLocked(!isSystemLocked)}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${isSystemLocked
-              ? 'bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/30'
-              : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30'
+              ? 'bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/30'
+              : 'bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30'
               }`}
           >
             {isSystemLocked ? (
