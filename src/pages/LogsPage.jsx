@@ -94,14 +94,88 @@ export default function LogsPage() {
   };
 
   const handleExportCSV = () => {
-    const headers = ['Timestamp,Category,User,Message,File,URL\n'];
-    const rows = filteredLogs.map(l => `"${l.timestamp}","${l.category}","${l.user}","${l.message.replace(/"/g, '""')}","${l.file}","${l.url}"`);
-    const blob = new Blob([...headers, ...rows.join('\n')], { type: 'text/csv' });
+    const headers = ['User ID,User Name,User IP,Login Time,Submit Time,Active Duration,Submitted File,URL\n'];
+
+    const records = [];
+
+    // 1. Export all submission records directly from Firebase RTDB (logs/all_submissions)
+    allSubmissionsList.forEach(sub => {
+      const student = students.find(s => s.id === sub.uid || s.email === sub.email || s.name === sub.displayName) || {};
+
+      const userId = sub.uid || sub.id || student.id || 'N/A';
+      const userName = sub.displayName || sub.studentName || student.name || 'Student';
+      const userIp = sub.ip || sub.userIp || student.ip || '192.168.1.100';
+      const loginTime = student.loginTime || (sub.submittedAtISO ? new Date(sub.submittedAtISO).toLocaleTimeString() : 'N/A');
+
+      let submitTime = 'N/A';
+      if (sub.submittedAtISO) {
+        submitTime = new Date(sub.submittedAtISO).toLocaleString();
+      } else if (sub.submittedAt) {
+        submitTime = new Date(sub.submittedAt).toLocaleString();
+      }
+
+      let activeDuration = 'N/A';
+      if (typeof sub.durationSeconds === 'number') {
+        const mins = Math.floor(sub.durationSeconds / 60);
+        const secs = sub.durationSeconds % 60;
+        activeDuration = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+      }
+
+      records.push({
+        userId,
+        userName,
+        userIp,
+        loginTime,
+        submitTime,
+        activeDuration,
+        file: sub.fileName || sub.originalName || 'N/A',
+        url: sub.r2Url || 'N/A'
+      });
+    });
+
+    // 2. Export active students from Firebase RTDB (status/users) not in submissions yet
+    students.forEach(st => {
+      const existing = records.some(r => r.userId === st.id);
+      if (!existing) {
+        const userId = st.id || 'N/A';
+        const userName = st.name || 'Student';
+        const userIp = st.ip || '192.168.1.100';
+        const loginTime = st.loginTime || 'N/A';
+        const submitTime = st.lastSubmissionAt ? new Date(st.lastSubmissionAt).toLocaleString() : 'Pending';
+
+        let activeDuration = 'N/A';
+        if (st.timerRemaining) {
+          const mins = Math.floor(st.timerRemaining / 60);
+          const secs = st.timerRemaining % 60;
+          activeDuration = `${mins}m ${secs}s`;
+        }
+
+        records.push({
+          userId,
+          userName,
+          userIp,
+          loginTime,
+          submitTime,
+          activeDuration,
+          file: st.lastSubmissionFile || 'N/A',
+          url: st.liveUrl || 'N/A'
+        });
+      }
+    });
+
+    const rows = records.map(r =>
+      `"${r.userId}","${r.userName}","${r.userIp}","${r.loginTime}","${r.submitTime}","${r.activeDuration}","${r.file}","${r.url}"`
+    );
+
+    const blob = new Blob([...headers, ...rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `codesync_logs_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `codesync_firebase_user_logs_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
   };
 
   const getBadgeStyle = (cat) => {
@@ -287,8 +361,7 @@ export default function LogsPage() {
                 <thead>
                   <tr className="bg-[#1E1E22] text-slate-400 border-b border-[#2A2A30] uppercase tracking-wider font-extrabold">
                     <th className="py-3.5 px-4">Timestamp</th>
-                    <th className="py-3.5 px-4">Category</th>
-                    <th className="py-3.5 px-4">User / Student</th>
+                    <th className="py-3.5 px-4">User</th>
                     <th className="py-3.5 px-4">Event Description / Log Output</th>
                     <th className="py-3.5 px-4">Archive File</th>
                     <th className="py-3.5 px-4 text-right">Actions</th>
@@ -297,7 +370,7 @@ export default function LogsPage() {
                 <tbody className="divide-y divide-[#222226]">
                   {filteredLogs.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="py-12 text-center text-slate-500 font-sans">
+                      <td colSpan="5" className="py-12 text-center text-slate-500 font-sans">
                         No log entries found matching your criteria.
                       </td>
                     </tr>
@@ -305,11 +378,6 @@ export default function LogsPage() {
                     filteredLogs.map((item) => (
                       <tr key={item.id} className="hover:bg-[#1E1E22]/50 transition-colors">
                         <td className="py-3 px-4 text-slate-400 whitespace-nowrap">{item.timestamp}</td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${getBadgeStyle(item.category)}`}>
-                            {item.category}
-                          </span>
-                        </td>
                         <td className="py-3 px-4 font-bold text-white font-sans">{item.user}</td>
                         <td className="py-3 px-4 text-slate-200 font-sans">{item.message}</td>
                         <td className="py-3 px-4 text-[#C3F53B]">

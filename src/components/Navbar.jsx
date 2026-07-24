@@ -35,25 +35,6 @@ export default function Navbar({ onToggleMobileSidebar, onToggleNotifications })
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Search Input */}
-        <div className="relative w-full">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search students, tasks, statuses, or build logs (Ctrl + K)..."
-            className="w-full pl-10 pr-10 py-2 bg-[#0D0D0D] border border-[#1A1A1A] rounded-2xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#C3F53B] transition-all font-mono"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white"
-            >
-              Clear
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Right Section: Status, Time, Notifications, Avatar */}

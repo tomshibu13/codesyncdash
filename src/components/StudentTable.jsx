@@ -325,17 +325,7 @@ export default function StudentTable({ limit }) {
                         >
                           <Terminal className="w-3.5 h-3.5" /> View Logs
                         </button>
-                        <button
-                          onClick={() => setSelectedStudentModal(student)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                            isDarkMode
-                              ? 'bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 border border-blue-500/30'
-                              : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-300'
-                          }`}
-                          title="Open Evaluation Form"
-                        >
-                          <Eye className="w-3.5 h-3.5" /> Evaluate
-                        </button>
+                        
                       </div>
                     </td>
                   </tr>
