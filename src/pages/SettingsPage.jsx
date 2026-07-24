@@ -49,7 +49,7 @@ export default function SettingsPage() {
           >
             {isSystemLocked ? (
               <>
-                <Unlock className="w-4 h-4" /> Lock All Systems
+                <Unlock className="w-4 h-4" /> Unlock
 
               </>
             ) : (
