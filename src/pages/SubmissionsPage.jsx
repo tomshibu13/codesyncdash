@@ -4,7 +4,6 @@ import { ref, onValue } from 'firebase/database';
 import SubmissionAnalytics from '../components/SubmissionAnalytics';
 import BuildDeployment from '../components/BuildDeployment';
 import { FileCheck, Download, Folder, FileCode2, Loader2 } from 'lucide-react';
-import JSZip from 'jszip';
 
 const TABS = ['home', 'about', 'participate', 'register', 'schedule'];
 
@@ -72,7 +71,7 @@ const getFileName = (file, index) => {
     const ext = file.r2Url?.endsWith('.zip') ? '.zip' : '';
     name = `submission-${file.id || index + 1}${ext || '.zip'}`;
   }
-  return name.replace(/[/\\?%*:|"<>]/g, '_');
+  return name;
 };
 
 export default function SubmissionsPage() {
@@ -126,66 +125,82 @@ export default function SubmissionsPage() {
 
     setIsDownloadingAll(true);
     try {
-      const zip = new JSZip();
-      let successCount = 0;
-      let failCount = 0;
+      // Check if showDirectoryPicker is supported and allowed
+      if ('showDirectoryPicker' in window) {
+        let dirHandle = null;
+        try {
+          dirHandle = await window.showDirectoryPicker({
+            mode: 'readwrite',
+          });
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            setIsDownloadingAll(false);
+            return;
+          }
+          console.warn('showDirectoryPicker unavailable or blocked, using sequential download fallback:', err);
+        }
 
-      for (let i = 0; i < tabData.length; i++) {
-        const file = tabData[i];
-        if (file.r2Url) {
-          const rawName = getFileName(file, i);
-          const userIdentifier = file.displayName || file.studentName || (file.email ? file.email.split('@')[0] : '');
-          const prefix = userIdentifier ? `${userIdentifier}_` : '';
-          const fileNameInZip = `${i + 1}_${prefix}${rawName}`.replace(/[/\\?%*:|"<>]/g, '_');
+        if (dirHandle) {
+          let successCount = 0;
+          let failCount = 0;
 
-          try {
-            const blob = await fetchFileAsBlob(file.r2Url, fileNameInZip);
-            zip.file(fileNameInZip, blob);
-            successCount++;
-          } catch (err) {
-            console.error(`Failed to download ${rawName}:`, err);
-            failCount++;
+          for (let i = 0; i < tabData.length; i++) {
+            const file = tabData[i];
+            if (file.r2Url) {
+              const fileName = getFileName(file, i);
+              try {
+                const blob = await fetchFileAsBlob(file.r2Url, fileName);
+                const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                successCount++;
+              } catch (err) {
+                console.error(`Failed to download ${fileName}:`, err);
+                failCount++;
+              }
+            }
+          }
+
+          if (successCount > 0) {
+            alert(`Successfully saved ${successCount} file(s) to your selected directory!${failCount > 0 ? ` (${failCount} failed)` : ''}`);
+            return;
           }
         }
       }
 
-      if (successCount > 0) {
-        const zipBlob = await zip.generateAsync({ type: 'blob' });
-        const zipFileName = `${activeTab}_all_submissions.zip`;
-
-        if ('showSaveFilePicker' in window) {
+      // Fallback for browsers without showDirectoryPicker or if dirHandle failed
+      let successCount = 0;
+      for (let i = 0; i < tabData.length; i++) {
+        const file = tabData[i];
+        if (file.r2Url) {
+          const fileName = getFileName(file, i);
           try {
-            const fileHandle = await window.showSaveFilePicker({
-              suggestedName: zipFileName,
-              types: [{
-                description: 'ZIP Archive',
-                accept: { 'application/zip': ['.zip'] },
-              }],
-            });
-            const writable = await fileHandle.createWritable();
-            await writable.write(zipBlob);
-            await writable.close();
-            return;
+            const blob = await fetchFileAsBlob(file.r2Url, fileName);
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+            successCount++;
+            await new Promise(r => setTimeout(r, 400));
           } catch (err) {
-            if (err.name === 'AbortError') return;
-            console.warn('showSaveFilePicker error, using blob URL download fallback:', err);
+            console.error(`Fallback download failed for ${fileName}, initiating direct proxy link:`, err);
+            const proxyDownloadUrl = `/api/proxy?url=${encodeURIComponent(file.r2Url)}&filename=${encodeURIComponent(fileName)}`;
+            const a = document.createElement('a');
+            a.href = proxyDownloadUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
           }
         }
-
-        const blobUrl = URL.createObjectURL(zipBlob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = zipFileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-
-        if (failCount > 0) {
-          alert(`Saved ${successCount} files into "${zipFileName}" (${failCount} failed).`);
-        }
-      } else {
-        alert('Failed to download submission files. Please check network connection.');
+      }
+      if (successCount > 0) {
+        alert(`Started downloading ${successCount} files! Check your downloads.`);
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -278,8 +293,8 @@ export default function SubmissionsPage() {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 capitalize ${activeTab === tab
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-slate-800/40 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'
                   }`}
               >
                 {tab}
@@ -291,8 +306,8 @@ export default function SubmissionsPage() {
             onClick={downloadAllR2Files}
             disabled={loading || tabData.length === 0 || isDownloadingAll}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${tabData.length > 0 && !isDownloadingAll
-                ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border border-indigo-500/30'
-                : 'bg-slate-800/40 text-slate-500 cursor-not-allowed border border-slate-800/50'
+              ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border border-indigo-500/30'
+              : 'bg-slate-800/40 text-slate-500 cursor-not-allowed border border-slate-800/50'
               }`}
           >
             {isDownloadingAll ? (

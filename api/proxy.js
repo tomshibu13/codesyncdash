@@ -1,49 +1,39 @@
 export default async function handler(req, res) {
-  // Set CORS headers
+  // Allow CORS from any origin for this endpoint
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    res.statusCode = 200;
-    res.end();
-    return;
+    return res.status(200).end();
   }
 
-  // Parse query parameters
-  const reqUrl = new URL(req.url, `http://${req.headers?.host || 'localhost'}`);
-  const targetUrl = req.query?.url || reqUrl.searchParams.get('url');
-  const filename = req.query?.filename || reqUrl.searchParams.get('filename') || 'download.zip';
+  const { url, filename } = req.query;
 
-  if (!targetUrl) {
-    res.statusCode = 400;
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ error: 'Missing url parameter' }));
-    return;
+  if (!url) {
+    return res.status(400).json({ error: 'Missing url parameter' });
   }
 
   try {
-    const response = await fetch(targetUrl);
+    const response = await fetch(url);
+
     if (!response.ok) {
-      res.statusCode = response.status;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ error: `Failed to fetch target file: ${response.statusText}` }));
-      return;
+      return res.status(response.status).json({ error: `Failed to fetch target file: ${response.statusText}` });
     }
 
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const contentType = response.headers.get('content-type') || 'application/octet-stream';
 
-    res.statusCode = 200;
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    const name = filename || 'download.zip';
+
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(name)}"`);
     res.setHeader('Content-Length', buffer.length);
-    res.end(buffer);
+
+    return res.status(200).send(buffer);
   } catch (error) {
     console.error('Error in proxy endpoint:', error);
-    res.statusCode = 500;
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ error: `Internal Proxy Error: ${error.message}` }));
+    return res.status(500).json({ error: `Internal Proxy Error: ${error.message}` });
   }
 }
