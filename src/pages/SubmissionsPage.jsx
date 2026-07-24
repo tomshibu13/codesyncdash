@@ -4,6 +4,7 @@ import { ref, onValue } from 'firebase/database';
 import SubmissionAnalytics from '../components/SubmissionAnalytics';
 import BuildDeployment from '../components/BuildDeployment';
 import { FileCheck, Download, Folder, FileCode2, Loader2 } from 'lucide-react';
+import JSZip from 'jszip';
 
 const TABS = ['home', 'about', 'participate', 'register', 'schedule'];
 
@@ -71,7 +72,7 @@ const getFileName = (file, index) => {
     const ext = file.r2Url?.endsWith('.zip') ? '.zip' : '';
     name = `submission-${file.id || index + 1}${ext || '.zip'}`;
   }
-  return name;
+  return name.replace(/[/\\?%*:|"<>]/g, '_');
 };
 
 export default function SubmissionsPage() {
@@ -125,82 +126,66 @@ export default function SubmissionsPage() {
 
     setIsDownloadingAll(true);
     try {
-      // Check if showDirectoryPicker is supported and allowed
-      if ('showDirectoryPicker' in window) {
-        let dirHandle = null;
-        try {
-          dirHandle = await window.showDirectoryPicker({
-            mode: 'readwrite',
-          });
-        } catch (err) {
-          if (err.name === 'AbortError') {
-            setIsDownloadingAll(false);
-            return;
-          }
-          console.warn('showDirectoryPicker unavailable or blocked, using sequential download fallback:', err);
-        }
-
-        if (dirHandle) {
-          let successCount = 0;
-          let failCount = 0;
-
-          for (let i = 0; i < tabData.length; i++) {
-            const file = tabData[i];
-            if (file.r2Url) {
-              const fileName = getFileName(file, i);
-              try {
-                const blob = await fetchFileAsBlob(file.r2Url, fileName);
-                const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
-                const writable = await fileHandle.createWritable();
-                await writable.write(blob);
-                await writable.close();
-                successCount++;
-              } catch (err) {
-                console.error(`Failed to download ${fileName}:`, err);
-                failCount++;
-              }
-            }
-          }
-
-          if (successCount > 0) {
-            alert(`Successfully saved ${successCount} file(s) to your selected directory!${failCount > 0 ? ` (${failCount} failed)` : ''}`);
-            return;
-          }
-        }
-      }
-
-      // Fallback for browsers without showDirectoryPicker or if dirHandle failed
+      const zip = new JSZip();
       let successCount = 0;
+      let failCount = 0;
+
       for (let i = 0; i < tabData.length; i++) {
         const file = tabData[i];
         if (file.r2Url) {
-          const fileName = getFileName(file, i);
+          const rawName = getFileName(file, i);
+          const userIdentifier = file.displayName || file.studentName || (file.email ? file.email.split('@')[0] : '');
+          const prefix = userIdentifier ? `${userIdentifier}_` : '';
+          const fileNameInZip = `${i + 1}_${prefix}${rawName}`.replace(/[/\\?%*:|"<>]/g, '_');
+
           try {
-            const blob = await fetchFileAsBlob(file.r2Url, fileName);
-            const blobUrl = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = blobUrl;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+            const blob = await fetchFileAsBlob(file.r2Url, fileNameInZip);
+            zip.file(fileNameInZip, blob);
             successCount++;
-            await new Promise(r => setTimeout(r, 400));
           } catch (err) {
-            console.error(`Fallback download failed for ${fileName}, initiating direct proxy link:`, err);
-            const proxyDownloadUrl = `/api/proxy?url=${encodeURIComponent(file.r2Url)}&filename=${encodeURIComponent(fileName)}`;
-            const a = document.createElement('a');
-            a.href = proxyDownloadUrl;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            console.error(`Failed to download ${rawName}:`, err);
+            failCount++;
           }
         }
       }
+
       if (successCount > 0) {
-        alert(`Started downloading ${successCount} files! Check your downloads.`);
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const zipFileName = `${activeTab}_all_submissions.zip`;
+
+        if ('showSaveFilePicker' in window) {
+          try {
+            const fileHandle = await window.showSaveFilePicker({
+              suggestedName: zipFileName,
+              types: [{
+                description: 'ZIP Archive',
+                accept: { 'application/zip': ['.zip'] },
+              }],
+            });
+            const writable = await fileHandle.createWritable();
+            await writable.write(zipBlob);
+            await writable.close();
+            return;
+          } catch (err) {
+            if (err.name === 'AbortError') return;
+            console.warn('showSaveFilePicker error, using blob URL download fallback:', err);
+          }
+        }
+
+        const blobUrl = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = zipFileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+
+        if (failCount > 0) {
+          alert(`Saved ${successCount} files into "${zipFileName}" (${failCount} failed).`);
+        }
+      } else {
+        alert('Failed to download submission files. Please check network connection.');
       }
     } catch (err) {
       if (err.name !== 'AbortError') {

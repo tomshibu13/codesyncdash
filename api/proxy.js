@@ -1,39 +1,49 @@
 export default async function handler(req, res) {
-  // Allow CORS from any origin for this endpoint
+  // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.statusCode = 200;
+    res.end();
+    return;
   }
 
-  const { url, filename } = req.query;
+  // Parse query parameters
+  const reqUrl = new URL(req.url, `http://${req.headers?.host || 'localhost'}`);
+  const targetUrl = req.query?.url || reqUrl.searchParams.get('url');
+  const filename = req.query?.filename || reqUrl.searchParams.get('filename') || 'download.zip';
 
-  if (!url) {
-    return res.status(400).json({ error: 'Missing url parameter' });
+  if (!targetUrl) {
+    res.statusCode = 400;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ error: 'Missing url parameter' }));
+    return;
   }
 
   try {
-    const response = await fetch(url);
-
+    const response = await fetch(targetUrl);
     if (!response.ok) {
-      return res.status(response.status).json({ error: `Failed to fetch target file: ${response.statusText}` });
+      res.statusCode = response.status;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: `Failed to fetch target file: ${response.statusText}` }));
+      return;
     }
 
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-
     const contentType = response.headers.get('content-type') || 'application/octet-stream';
-    const name = filename || 'download.zip';
 
+    res.statusCode = 200;
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(name)}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     res.setHeader('Content-Length', buffer.length);
-
-    return res.status(200).send(buffer);
+    res.end(buffer);
   } catch (error) {
     console.error('Error in proxy endpoint:', error);
-    return res.status(500).json({ error: `Internal Proxy Error: ${error.message}` });
+    res.statusCode = 500;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ error: `Internal Proxy Error: ${error.message}` }));
   }
 }
