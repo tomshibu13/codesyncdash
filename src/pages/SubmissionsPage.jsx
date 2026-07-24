@@ -4,22 +4,45 @@ import { ref, onValue } from 'firebase/database';
 import SubmissionAnalytics from '../components/SubmissionAnalytics';
 import BuildDeployment from '../components/BuildDeployment';
 import { FileCheck, Download, Folder, FileCode2, Loader2 } from 'lucide-react';
+import JSZip from 'jszip';
 
 const TABS = ['home', 'about', 'participate', 'register', 'schedule'];
 
-// Helper to fetch file as Blob, trying direct fetch first then reliable CORS proxies
-const fetchFileAsBlob = async (url) => {
-  // 1. Try direct fetch
+// Helper to fetch file as Blob, trying serverless API proxy first, direct fetch, then CORS proxies
+const fetchFileAsBlob = async (url, filename) => {
+  // 1. Try serverless / dev API proxy route (most reliable, bypasses CORS)
+  try {
+    const proxyApiUrl = `/api/proxy?url=${encodeURIComponent(url)}${filename ? `&filename=${encodeURIComponent(filename)}` : ''}`;
+    const res = await fetch(proxyApiUrl);
+    if (res.ok) {
+      return await res.blob();
+    }
+  } catch (e) {
+    console.warn('API proxy fetch failed, trying direct fetch...', e);
+  }
+
+  // 2. Try direct fetch
   try {
     const res = await fetch(url);
     if (res.ok) {
       return await res.blob();
     }
   } catch (e) {
-    console.warn('Direct fetch failed, trying CORS proxy fallback...', e);
+    console.warn('Direct fetch failed, trying corsproxy.io fallback...', e);
   }
 
-  // 2. Fallback to api.allorigins.win
+  // 3. Fallback to corsproxy.io
+  try {
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl);
+    if (res.ok) {
+      return await res.blob();
+    }
+  } catch (e) {
+    console.warn('corsproxy.io proxy failed, trying allorigins...', e);
+  }
+
+  // 4. Fallback to api.allorigins.win
   try {
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
     const res = await fetch(proxyUrl);
@@ -27,18 +50,7 @@ const fetchFileAsBlob = async (url) => {
       return await res.blob();
     }
   } catch (e) {
-    console.warn('Allorigins proxy failed, trying codetabs proxy...', e);
-  }
-
-  // 3. Fallback to api.codetabs.com
-  try {
-    const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
-    const res = await fetch(proxyUrl);
-    if (res.ok) {
-      return await res.blob();
-    }
-  } catch (e) {
-    console.warn('Codetabs proxy failed...', e);
+    console.warn('Allorigins proxy failed...', e);
   }
 
   throw new Error('Unable to fetch file content via direct request or proxies.');
@@ -60,7 +72,7 @@ const getFileName = (file, index) => {
     const ext = file.r2Url?.endsWith('.zip') ? '.zip' : '';
     name = `submission-${file.id || index + 1}${ext || '.zip'}`;
   }
-  return name;
+  return name.replace(/[/\\?%*:|"<>]/g, '_');
 };
 
 export default function SubmissionsPage() {
@@ -114,81 +126,72 @@ export default function SubmissionsPage() {
     
     setIsDownloadingAll(true);
     try {
-      // Check if showDirectoryPicker is supported and allowed
-      if ('showDirectoryPicker' in window) {
-        let dirHandle = null;
-        try {
-          dirHandle = await window.showDirectoryPicker({
-            mode: 'readwrite',
-          });
-        } catch (err) {
-          if (err.name === 'AbortError') {
-            setIsDownloadingAll(false);
-            return;
-          }
-          console.warn('showDirectoryPicker unavailable or blocked, using sequential download fallback:', err);
-        }
-
-        if (dirHandle) {
-          let successCount = 0;
-          let failCount = 0;
-
-          for (let i = 0; i < tabData.length; i++) {
-            const file = tabData[i];
-            if (file.r2Url) {
-              const fileName = getFileName(file, i);
-              try {
-                const blob = await fetchFileAsBlob(file.r2Url);
-                const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
-                const writable = await fileHandle.createWritable();
-                await writable.write(blob);
-                await writable.close();
-                successCount++;
-              } catch (err) {
-                console.error(`Failed to download ${fileName}:`, err);
-                failCount++;
-              }
-            }
-          }
-
-          if (successCount > 0) {
-            alert(`Successfully saved ${successCount} file(s) to your selected directory!${failCount > 0 ? ` (${failCount} failed)` : ''}`);
-            return;
-          }
-        }
-      }
-
-      // Fallback for browsers without showDirectoryPicker or if dirHandle failed
+      const zip = new JSZip();
       let successCount = 0;
+      let failCount = 0;
+
       for (let i = 0; i < tabData.length; i++) {
         const file = tabData[i];
         if (file.r2Url) {
-          const fileName = getFileName(file, i);
+          const rawName = getFileName(file, i);
+          const userIdentifier = file.displayName || file.studentName || (file.email ? file.email.split('@')[0] : '');
+          const prefix = userIdentifier ? `${userIdentifier}_` : '';
+          // Ensure unique file name inside the zip archive to avoid duplicate name overwrite
+          const fileNameInZip = `${i + 1}_${prefix}${rawName}`.replace(/[/\\?%*:|"<>]/g, '_');
+
           try {
-            const blob = await fetchFileAsBlob(file.r2Url);
-            const blobUrl = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = blobUrl;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+            const blob = await fetchFileAsBlob(file.r2Url, fileNameInZip);
+            zip.file(fileNameInZip, blob);
             successCount++;
-            await new Promise(r => setTimeout(r, 400));
           } catch (err) {
-            console.error(`Fallback download failed for ${fileName}, opening direct URL:`, err);
-            window.open(file.r2Url, '_blank');
+            console.error(`Failed to include file ${rawName} in zip:`, err);
+            failCount++;
           }
         }
       }
+
       if (successCount > 0) {
-        alert(`Started downloading ${successCount} files! Check your downloads.`);
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const zipFileName = `${activeTab}_all_submissions.zip`;
+
+        if ('showSaveFilePicker' in window) {
+          try {
+            const fileHandle = await window.showSaveFilePicker({
+              suggestedName: zipFileName,
+              types: [{
+                description: 'ZIP Archive',
+                accept: { 'application/zip': ['.zip'] },
+              }],
+            });
+            const writable = await fileHandle.createWritable();
+            await writable.write(zipBlob);
+            await writable.close();
+            return;
+          } catch (err) {
+            if (err.name === 'AbortError') return;
+            console.warn('showSaveFilePicker error, using blob URL download fallback:', err);
+          }
+        }
+
+        const blobUrl = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = zipFileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+
+        if (failCount > 0) {
+          alert(`Successfully packaged ${successCount} files into "${zipFileName}" (${failCount} failed).`);
+        }
+      } else {
+        alert('Failed to download submission files. Please check network connection.');
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
-        console.error('Directory download failed:', err);
-        alert(`Directory save failed: ${err.message}`);
+        console.error('Download all ZIP failed:', err);
+        alert(`Download all failed: ${err.message}`);
       }
     } finally {
       setIsDownloadingAll(false);
@@ -203,18 +206,17 @@ export default function SubmissionsPage() {
     const fileName = getFileName(file, index);
 
     try {
-      // Step 1: Attempt to fetch file as Blob
+      // Step 1: Attempt to fetch file as Blob via proxy/direct/CORS proxies
       let blob;
       try {
-        blob = await fetchFileAsBlob(file.r2Url);
+        blob = await fetchFileAsBlob(file.r2Url, fileName);
       } catch (err) {
-        console.warn('Blob fetch failed, opening direct URL:', err);
-        // Fallback: direct download link / open tab
+        console.warn('Blob fetch failed, falling back to serverless proxy URL download:', err);
+        // Fallback: direct download link via serverless proxy
+        const proxyDownloadUrl = `/api/proxy?url=${encodeURIComponent(file.r2Url)}&filename=${encodeURIComponent(fileName)}`;
         const a = document.createElement('a');
-        a.href = file.r2Url;
+        a.href = proxyDownloadUrl;
         a.download = fileName;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

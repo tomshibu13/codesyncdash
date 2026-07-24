@@ -494,9 +494,8 @@ export default function LogsPage() {
                       <td className="py-3 px-4 text-right font-sans">
                         {sub.r2Url ? (
                           <a
-                            href={sub.r2Url}
-                            target="_blank"
-                            rel="noreferrer"
+                            href={`/api/proxy?url=${encodeURIComponent(sub.r2Url)}&filename=${encodeURIComponent(sub.fileName || 'submission.zip')}`}
+                            download={sub.fileName || 'submission.zip'}
                             className="px-3 py-1.5 rounded-xl bg-[#C3F53B] hover:bg-[#b0df32] text-black text-[11px] font-black uppercase tracking-wider inline-flex items-center gap-1 shadow-md"
                           >
                             Download <ExternalLink className="w-3 h-3" />
