@@ -22,9 +22,7 @@ export default function DashboardCards() {
   const totalStudents = students?.length || kpis.totalStudents || 0;
 
   // Compute exact stage percentages
-  const devPercent = (kpis.submissionsCount >= 50 || (totalStudents > 0 && kpis.submissionsCount >= totalStudents))
-    ? 100
-    : (totalStudents > 0 ? Math.min(100, Math.round(((kpis.submissionsCount || 0) / totalStudents) * 100)) : 0);
+  const devPercent = 100;
   const integrationPercent = integrationData?.integrationComplete ? 100 : (totalStudents > 0 ? Math.min(100, Math.round(((kpis.integrationPassedCount || 0) / totalStudents) * 100)) : 0);
   const hostPercent = integrationData?.hostingComplete ? 100 : (totalStudents > 0 ? Math.min(100, Math.round(((kpis.successfulDeployments || 0) / totalStudents) * 100)) : 0);
 
@@ -33,7 +31,7 @@ export default function DashboardCards() {
       id: 'developers',
       name: 'Developers',
       percent: devPercent,
-      isComplete: devPercent === 100 || (kpis.submissionsCount >= 50) || (totalStudents > 0 && kpis.submissionsCount >= totalStudents),
+      isComplete: devPercent === 100 || (kpis.submissionsCount >= 0) || (totalStudents > 0 && kpis.submissionsCount >= totalStudents),
       icon: Code2
     },
     {
@@ -127,12 +125,12 @@ export default function DashboardCards() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: idx * 0.1 }}
                   className={`relative p-4 sm:p-5 rounded-2xl border transition-all duration-500 flex flex-col justify-between gap-2.5 overflow-hidden min-h-[96px] group ${isComplete
-                      ? (isDarkMode
-                        ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-100 shadow-[0_0_35px_-5px_rgba(52,211,153,0.45)]'
-                        : 'bg-emerald-100 border-2 border-emerald-500 text-emerald-950 shadow-lg shadow-emerald-500/20')
-                      : (isDarkMode
-                        ? 'bg-slate-950/90 border-slate-800/80 text-slate-300'
-                        : 'bg-slate-50 border-slate-200 text-slate-800 shadow-md')
+                    ? (isDarkMode
+                      ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-100 shadow-[0_0_35px_-5px_rgba(52,211,153,0.45)]'
+                      : 'bg-emerald-100 border-2 border-emerald-500 text-emerald-950 shadow-lg shadow-emerald-500/20')
+                    : (isDarkMode
+                      ? 'bg-slate-950/90 border-slate-800/80 text-slate-300'
+                      : 'bg-slate-50 border-slate-200 text-slate-800 shadow-md')
                     }`}
                 >
                   {/* Subtle Inner Glow */}
@@ -144,8 +142,8 @@ export default function DashboardCards() {
                   <div className="flex items-center justify-between gap-3 w-full relative z-10">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={`p-2.5 rounded-xl border shrink-0 transition-transform group-hover:scale-110 ${isComplete
-                          ? 'bg-emerald-400 text-slate-950 border-emerald-200 shadow-lg shadow-emerald-400/40'
-                          : (isDarkMode ? 'bg-slate-800/80 border-slate-700 text-slate-400' : 'bg-slate-200 border-slate-300 text-slate-600')
+                        ? 'bg-emerald-400 text-slate-950 border-emerald-200 shadow-lg shadow-emerald-400/40'
+                        : (isDarkMode ? 'bg-slate-800/80 border-slate-700 text-slate-400' : 'bg-slate-200 border-slate-300 text-slate-600')
                         }`}>
                         {isComplete ? <CheckCircle2 className="w-5 h-5 text-slate-950" /> : <Icon className="w-5 h-5" />}
                       </div>
@@ -156,8 +154,8 @@ export default function DashboardCards() {
                     </div>
 
                     <div className={`text-2xl sm:text-3xl font-black font-mono tracking-tight shrink-0 ml-auto leading-none ${isComplete
-                        ? (isDarkMode ? 'text-emerald-300 drop-shadow-[0_0_10px_rgba(52,211,153,0.6)]' : 'text-emerald-800')
-                        : (isDarkMode ? 'text-slate-100' : 'text-slate-900')
+                      ? (isDarkMode ? 'text-emerald-300 drop-shadow-[0_0_10px_rgba(52,211,153,0.6)]' : 'text-emerald-800')
+                      : (isDarkMode ? 'text-slate-100' : 'text-slate-900')
                       }`}>
                       {step.percent}%
                     </div>
@@ -223,8 +221,8 @@ export default function DashboardCards() {
                 }`}>
                 <span className="leading-tight font-medium">{card.desc}</span>
                 <span className={`inline-flex items-center gap-1 font-bold text-xs px-2.5 py-1 rounded-lg shrink-0 shadow-sm ${card.trendUp
-                    ? (isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-300')
-                    : (isDarkMode ? 'bg-red-500/15 text-red-400 border border-red-500/30' : 'bg-red-100 text-red-800 border border-red-300')
+                  ? (isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-300')
+                  : (isDarkMode ? 'bg-red-500/15 text-red-400 border border-red-500/30' : 'bg-red-100 text-red-800 border border-red-300')
                   }`}>
                   {card.trendUp ? <TrendingUp className="w-3.5 h-3.5 shrink-0" /> : <TrendingDown className="w-3.5 h-3.5 shrink-0" />}
                 </span>
