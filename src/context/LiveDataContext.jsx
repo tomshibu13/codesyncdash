@@ -187,9 +187,9 @@ export const LiveDataProvider = ({ children }) => {
   const [eventTimeRemaining, setEventTimeRemaining] = useState(() => {
     try {
       const savedTimer = localStorage.getItem('codesync_event_timer');
-      return savedTimer !== null ? parseInt(savedTimer, 10) : 4820;
+      return savedTimer !== null ? parseInt(savedTimer, 10) : 0;
     } catch (e) {
-      return 4820;
+      return 0;
     }
   });
 
@@ -214,7 +214,7 @@ export const LiveDataProvider = ({ children }) => {
     if (!isTimerRunning) return;
     const timer = setInterval(() => {
       setEventTimeRemaining(prev => {
-        const next = Math.max(0, prev - 1);
+        const next = prev + 1;
         try {
           localStorage.setItem('codesync_event_timer', next);
         } catch (e) { }

@@ -26,7 +26,7 @@ export default function RightPanel() {
   const {
     kpis,
     isDarkMode,
-    eventTimeRemaining = 4820,
+    eventTimeRemaining = 0,
     setEventTimeRemaining,
     isTimerRunning = true,
     setIsTimerRunning
@@ -35,9 +35,19 @@ export default function RightPanel() {
   const [collapsed, setCollapsed] = useState(false);
   const [isEditingTimer, setIsEditingTimer] = useState(false);
 
-  const [editHours, setEditHours] = useState(1);
-  const [editMinutes, setEditMinutes] = useState(20);
-  const [editSeconds, setEditSeconds] = useState(20);
+  const [editHours, setEditHours] = useState(0);
+  const [editMinutes, setEditMinutes] = useState(0);
+  const [editSeconds, setEditSeconds] = useState(0);
+
+  const [realTime, setRealTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setRealTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const istTime = realTime.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: true });
+  const utcTime = realTime.toLocaleTimeString('en-US', { timeZone: 'UTC', hour12: true });
 
   const handleOpenEdit = () => {
     const hours = Math.floor(eventTimeRemaining / 3600);
@@ -107,7 +117,7 @@ export default function RightPanel() {
             <div className={`border-b pb-3.5 ${isDarkMode ? 'border-[#222226]' : 'border-slate-200'}`}>
               <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 font-mono">
                 <span className="flex items-center gap-1.5 text-[#C3F53B]">
-                  <Clock className="w-3.5 h-3.5" /> Event Countdown
+                  <Clock className="w-3.5 h-3.5" /> Event Stopwatch
                 </span>
                 <div className="flex items-center gap-1.5">
                   <span className="px-2 py-0.5 rounded-full bg-[#C3F53B]/20 text-[#C3F53B] text-[10px] font-bold">
@@ -150,6 +160,18 @@ export default function RightPanel() {
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
+                </div>
+              </div>
+
+              {/* World Clocks */}
+              <div className="mt-3 pt-3 border-t border-dashed border-slate-200 dark:border-slate-700/60 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-mono">
+                  <span className="text-slate-400 font-bold uppercase tracking-wider">IST</span>
+                  <span className={`font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{istTime}</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-mono">
+                  <span className="text-slate-400 font-bold uppercase tracking-wider">UTC</span>
+                  <span className={`font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{utcTime}</span>
                 </div>
               </div>
 
@@ -261,10 +283,10 @@ export default function RightPanel() {
                         <button
                           type="button"
                           onClick={() => {
-                            setEditHours(1);
-                            setEditMinutes(20);
-                            setEditSeconds(20);
-                            if (setEventTimeRemaining) setEventTimeRemaining(4820);
+                            setEditHours(0);
+                            setEditMinutes(0);
+                            setEditSeconds(0);
+                            if (setEventTimeRemaining) setEventTimeRemaining(0);
                           }}
                           className={`px-2 py-1 rounded-lg text-[11px] font-mono font-bold border flex items-center gap-1 transition-colors ${
                             isDarkMode
